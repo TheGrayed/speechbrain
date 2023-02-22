@@ -227,11 +227,11 @@ def create_csv(
         words = unicode_normalisation(words)
 
         # !! Language specific cleaning !!
-        words = language_specific_preprocess(language, words)
+        words, can_ascii = language_specific_preprocess(language, words)
 
         # Remove accents if specified
         if not accented_letters:
-            words = strip_accents(words)
+            words = strip_accents(words, can_ascii)
             words = words.replace("'", " ")
             words = words.replace("’", " ")
 
@@ -281,6 +281,7 @@ def language_specific_preprocess(language, words):
     # !! Language specific cleaning !!
     # Important: feel free to specify the text normalization
     # corresponding to your alphabet.
+    can_ascii = True
 
     if language in ["en", "fr", "it", "rw"]:
         words = re.sub(
@@ -326,6 +327,7 @@ def language_specific_preprocess(language, words):
             + ALEF_HAMZA_ABOVE
         )
         words = re.sub("[^" + letters + " ]+", "", words).upper()
+        can_ascii = False
     elif language == "ga-IE":
         # Irish lower() is complicated, but upper() is nondeterministic, so use lowercase
         def pfxuc(a):
@@ -340,7 +342,7 @@ def language_specific_preprocess(language, words):
         # Fix the following error in dataset large:
         # KeyError: 'The item En noviembre lanzaron Queen Elizabeth , coproducida por Foreign Noi$e . requires replacements which were not supplied.'
         words = words.replace("$", "s")
-    return words
+    return words, can_ascii
 
 
 def check_commonvoice_folders(data_folder):
@@ -369,10 +371,15 @@ def unicode_normalisation(text):
     return str(text)
 
 
-def strip_accents(text):
-    text = (
-        unicodedata.normalize("NFD", text)
-        .encode("ascii", "ignore")
-        .decode("utf-8")
-    )
+def strip_accents(text, can_ascii):
+    if can_ascii:
+        text = (
+            unicodedata.normalize("NFD", text)
+            .encode("ascii", "ignore")
+            .decode("utf-8")
+        )
+    else:
+        text = (
+            unicodedata.normalize("NFD", text)
+        )
     return str(text)
